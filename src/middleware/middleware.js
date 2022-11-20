@@ -14,8 +14,8 @@ const authentication = function (req, res, next) {
         let payloadData ;
         // console.log(token)
         let verifytoken = jwt.verify( token, "our first project" , function(err , decoded){
-            payloadData = decoded
             if(err) return res.status(401).send({status : false , message : "Authentication failed."})
+            payloadData = decoded
         })
 
         // // Now token is Decoded. 
@@ -27,7 +27,7 @@ const authentication = function (req, res, next) {
         // // Set attri. in request --> Used in autherisation , this tokenAuthorId
         req.tokenAuthorId = payloadData._id
 
-        console.log(req.tokenAuthorId)
+        // console.log(req.tokenAuthorId)
 
         next()
 

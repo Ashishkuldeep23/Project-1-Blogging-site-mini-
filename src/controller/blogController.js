@@ -14,6 +14,7 @@ const blogs = async function (req, res) {
     try {
         // // All Data From Body putting in data var.
         let data = req.body
+        if (Object.keys(data).length <= 0) return res.status(400).send({ status: false, message: "Give some required data to make new blog." });
 
         // // All Mandatory field taking out and checking present or not , if  not present then send an err msg. 
         let { title, body, authorId, category } = req.body
@@ -25,7 +26,6 @@ const blogs = async function (req, res) {
 
         if (!mongoose.Types.ObjectId.isValid(authorId)) return res.status(400).send({ status: false, msg: "Invalid Author Id" })
 
-
         // // // Find data with authorId
         let isAuthorPresent = await authorModel.findOne({ _id: authorId })
 
@@ -34,18 +34,13 @@ const blogs = async function (req, res) {
         // // Extracting two keys from body bez we need to do extra date acc. to true or false.
         let isPublished = req.body.isPublished
         let isDeleted = req.body.isDeleted
-        let date = Date.now()
+
 
         // // If isPulished is true then do two thing -> attach current date to pulishedAt key and make true isPublished
-        if (isPublished) {
-            req.body.publishedAt = date
-            isPublished = true
-        }
 
-        if (isDeleted) {
-            req.body.deletedAt = date
-            isDeleted = true
-        }
+        if (isPublished) { req.body.publishedAt =  Date.now()}
+        if (isDeleted){ req.body.deletedAt =  Date.now()}
+    
 
 
         // // // If everyThing is right then created blog with this data and send back into response. 
@@ -62,45 +57,34 @@ const blogs = async function (req, res) {
 
 
 
-const allBlogs = async function (req, res) {
 
-    try {
 
-        // // All query field extractng here to search data with these field
-        const { authorId, category, tags, subcategory } = req.query
 
-        // // Creating a findObj here all find field is present (Two field present every time)
-        let findObj = {
-            isDeleted: false,
-            isPublished: true
-        }
+const newGetApi = async function(req ,res ){
+    // const { authorId, category, tags, subcategory } = req.query
 
-        // // If any more field is given in query params then add that field into findObj and then find data in DB (Object concept)
-        if (authorId) {
-            findObj["authorId"] = authorId
-        }
-        if (category) {
-            findObj["category"] = category
-        }
-        if (tags) {
-            findObj["tags"] = tags
-        }
-        if (subcategory) {
-            findObj["subcategory"] = subcategory
-        }
+    let query = req.query
 
-        // // // Find data with findObj , if no data find then send 404 err No Data Found otherwise send data in response.
-        let data = await blogModel.find(findObj)
+    // console.log(query)
 
-        if (data.length <= 0) return res.status(404).send({ status: false, message: 'No Data Found' })
-
-        res.status(200).send({ status: true, AllDataAre: data.length, data: data })
-
-    } catch (err) {
-        console.log(err)
-        res.status(500).send({ status: false, message: err.message })
+    for(let key in query){
+        if(key!="category" && key!="subcategory" && key!="tags" && key!="title" && key!= "authorId") return res.send({status : false , message: "Key does't exist in DB , check key name please."})
     }
+    
+    // console.log(query)
 
+    // // Below line is best for using filter data by query params it is nice way to do same job then above function.
+    // // But time wise above Query is taking less time then this query. 
+
+    let findObj = {isDeleted:false , isPublished : true , ...query}
+
+    // console.log(findObj)
+    
+    let data = await blogModel.find(findObj)
+
+    if (data.length <= 0) return res.status(404).send({ status: false, message: 'No Data Found with given key.' })
+
+    res.status(200).send({ status: true , AllDataAre: data.length , data: data })
 
 }
 
@@ -116,7 +100,6 @@ const updateBlog = async function (req, res) {
         let { title, body, category, isPublished, tags, subcategory } = updatedBody;
 
         if (Object.keys(updatedBody).length <= 0) return res.status(400).send({ status: false, message: "Data must be present" });
-
         let blogId = req.params.blogId;
 
         // if (!mongoose.Types.ObjectId.isValid(blogId)) return res.status(400).send({ Status: false, msg: "Invalid Blog Id" })
@@ -143,8 +126,8 @@ const updateBlog = async function (req, res) {
 
         res.status(200).send({ status: true, message: "Blog has been successfully updated", Data: updatedBlog });
 
-    } catch (Error) {
-        return res.status(500).send({ status: false, message: Error.message || "Some server error occured" });
+    } catch (err) {
+        return res.status(500).send({ status: false, message: err.message || "Some server error occured" });
 
     }
 
@@ -185,53 +168,37 @@ const deleteBlog = async function (req, res) {
 
 
 
-const deletBlogByQuery = async function (req, res) {
-    try {
-
-        const query = req.query
-        const { category , tags, subcategory } = query
 
 
-        // // // Every time when user want to delete data by query then give author id for authorisation purpose and blog should be not deleted.
-        let findObj = { isDeleted: false  , isPublished : false }
+const deletBlogByQueryNew = async function(req ,res){
+    let findObj = { isDeleted: false  , isPublished : false , ...req.query}
 
+    let tokenAuthorId = req.tokenAuthorId
 
-        // // // In next line we are looking user is authentic user and he/she can delete blog in own blogs.
-        let tokenAuthorId = req.tokenAuthorId
-        // // Adding one attribute in findObj that is authorId by token data.
+    let authorIdInQuery = req.query.authorId
+    if(authorIdInQuery){
+
+        if(tokenAuthorId != authorIdInQuery) return res.status(403).send({status : false , message : "You are not authorized to do that, token athorId is different from query authorId, Forbidden"})
+
+    }else{
+
         findObj.authorId = tokenAuthorId
-
-
-
-        if (category) {
-            findObj["category"] = category
-        }
-        if (tags) {
-            findObj["tags"] = tags
-        }
-        if (subcategory) {
-            findObj["subcategory"] = subcategory
-        }
-
-
-
-        // // Any data coming on query or not ?
         if ( Object.keys(findObj).length <= 3) return res.status(400).send({ status: false, message: "Please give some data that you want to delete that is not deleted" })
 
-        let data = await blogModel.updateMany(
-            findObj,
-            { $set: { isDeleted: true, deletedAt: Date.now() } }
-        )
-
-        // How many data matched with condition -->
-        if (data.matchedCount <= 0) return res.status(404).send({ status: false, message: "No Data Found" })
-
-        res.status(200).send({ status: true, message: `${data.matchedCount} is deleted` })
-
-    } catch (err) {
-        console.log(err)
-        res.status(500).send({ status: false, message: err.message })
     }
+
+    // console.log(findObj)
+
+
+
+    let data = await blogModel.updateMany(
+        findObj,
+        { $set: { isDeleted: true, deletedAt: Date.now() } }
+    )
+
+    if (data.matchedCount <= 0) return res.status(404).send({ status: false, message: "No Data Found" })
+
+    res.status(200).send({ status: true, message: `${data.matchedCount} is deleted` })
 
 }
 
@@ -244,6 +211,125 @@ const deletBlogByQuery = async function (req, res) {
 
 
 
+module.exports = {  blogs, allBlogs, updateBlog, deleteBlog, deletBlogByQuery ,newGetApi , deletBlogByQueryNew }
 
 
-module.exports = {  blogs, allBlogs, updateBlog, deleteBlog, deletBlogByQuery }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// // // // Privious logics are ----->
+
+
+
+
+// // // Get get with query params 
+// const allBlogs = async function (req, res) {
+
+//     try {
+
+//         // // All query field extractng here to search data with these field
+//         const { authorId, category, tags, subcategory } = req.query
+
+//         // // Creating a findObj here all find field is present (Two field present every time)
+//         let findObj = {
+//             isDeleted: false,
+//             isPublished: true
+//         }
+
+//         // // If any more field is given in query params then add that field into findObj and then find data in DB (Object concept)
+//         if (authorId) {
+//             findObj["authorId"] = authorId
+//         }
+//         if (category) {
+//             findObj["category"] = category
+//         }
+//         if (tags) {
+//             findObj["tags"] = tags
+//         }
+//         if (subcategory) {
+//             findObj["subcategory"] = subcategory
+//         }
+
+//         // // // Find data with findObj , if no data find then send 404 err No Data Found otherwise send data in response.
+//         let data = await blogModel.find(findObj)
+
+//         if (data.length <= 0) return res.status(404).send({ status: false, message: 'No Data Found' })
+
+//         res.status(200).send({ status: true, AllDataAre: data.length, data: data })
+
+//     } catch (err) {
+//         console.log(err)
+//         res.status(500).send({ status: false, message: err.message })
+//     }
+
+
+// }
+
+
+
+
+
+// // // // Delete data by Query Params ---------------------->
+
+// const deletBlogByQuery = async function (req, res) {
+//     try {
+
+//         const query = req.query
+//         const { category , tags, subcategory } = query
+
+
+//         // // // Every time when user want to delete data by query then give author id for authorisation purpose and blog should be not deleted.
+//         let findObj = { isDeleted: false  , isPublished : false }
+
+
+//         // // // In next line we are looking user is authentic user and he/she can delete blog in own blogs.
+//         let tokenAuthorId = req.tokenAuthorId
+//         // // Adding one attribute in findObj that is authorId by token data.
+//         findObj.authorId = tokenAuthorId
+
+
+
+//         if (category) {
+//             findObj["category"] = category
+//         }
+//         if (tags) {
+//             findObj["tags"] = tags
+//         }
+//         if (subcategory) {
+//             findObj["subcategory"] = subcategory
+//         }
+
+
+
+//         // // Any data coming on query or not ?
+//         if ( Object.keys(findObj).length <= 3) return res.status(400).send({ status: false, message: "Please give some data that you want to delete that is not deleted" })
+
+//         let data = await blogModel.updateMany(
+//             findObj,
+//             { $set: { isDeleted: true, deletedAt: Date.now() } }
+//         )
+
+//         // How many data matched with condition -->
+//         if (data.matchedCount <= 0) return res.status(404).send({ status: false, message: "No Data Found" })
+
+//         res.status(200).send({ status: true, message: `${data.matchedCount} is deleted` })
+
+//     } catch (err) {
+//         console.log(err)
+//         res.status(500).send({ status: false, message: err.message })
+//     }
+
+// }
