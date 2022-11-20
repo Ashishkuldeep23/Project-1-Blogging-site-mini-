@@ -10,7 +10,7 @@ const authentication = function (req, res, next) {
         let token = req.headers['x-api-key']
         if (!token) return res.status(404).send({ status:false , message : "Token is not present in header"})
 
-
+        
         let payloadData ;
         // console.log(token)
         let verifytoken = jwt.verify( token, "our first project" , function(err , decoded){
@@ -68,7 +68,7 @@ const authorisation = async function (req, res, next) {
         next()
 
     } catch (err) { 
-        console.log(err.message)
+        // console.log(err.message)
         res.status(500).send({ status: false, msg: err.message })
     }
 
@@ -77,4 +77,4 @@ const authorisation = async function (req, res, next) {
 
 
 
-module.exports = { authentication, authorisation }
+module.exports = { authentication , authorisation }

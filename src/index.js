@@ -15,9 +15,10 @@ mongoose.connect("mongodb+srv://rjrohit13:bThZ1H4sEACa5DqQ@cluster0.fo02cni.mong
 
 app.use('/', route);
 
-// app.use( (req ,res) => {
-//     res.status(404).send({status : false , message :`Page Not Found , Given URL ${req.url} is incorrect for this application.`})
-// })
+app.use( (req ,res) => {
+    res.status(404).send({status : false , message :`Page Not Found , Given URL ${req.url} is incorrect for this application.`})
+})
+
 
 app.listen(process.env.PORT || 3000, function () {
     console.log('Express app running on port ' + (process.env.PORT || 3000))

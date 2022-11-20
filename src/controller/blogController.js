@@ -68,7 +68,7 @@ const newGetApi = async function(req ,res ){
     // console.log(query)
 
     for(let key in query){
-        if(key!="category" && key!="subcategory" && key!="tags" && key!="title" && key!= "authorId") return res.send({status : false , message: "Key does't exist in DB , check key name please."})
+        if(key!="category" && key!="subcategory" && key!="tags" && key!="title" && key!= "authorId") return res.status(400).send({status : false , message: "Key does't exist in DB , check key name please."})
     }
     
     // console.log(query)
@@ -100,6 +100,7 @@ const updateBlog = async function (req, res) {
         let { title, body, category, isPublished, tags, subcategory } = updatedBody;
 
         if (Object.keys(updatedBody).length <= 0) return res.status(400).send({ status: false, message: "Data must be present" });
+        
         let blogId = req.params.blogId;
 
         // if (!mongoose.Types.ObjectId.isValid(blogId)) return res.status(400).send({ Status: false, msg: "Invalid Blog Id" })
@@ -180,6 +181,10 @@ const deletBlogByQueryNew = async function(req ,res){
 
         if(tokenAuthorId != authorIdInQuery) return res.status(403).send({status : false , message : "You are not authorized to do that, token athorId is different from query authorId, Forbidden"})
 
+        findObj.authorId = tokenAuthorId
+        if ( Object.keys(findObj).length <= 3) return res.status(400).send({ status: false, message: "Please give some data that you want to delete that is not deleted" })
+
+
     }else{
 
         findObj.authorId = tokenAuthorId
@@ -211,7 +216,7 @@ const deletBlogByQueryNew = async function(req ,res){
 
 
 
-module.exports = {  blogs, allBlogs, updateBlog, deleteBlog, deletBlogByQuery ,newGetApi , deletBlogByQueryNew }
+module.exports = {  blogs,  updateBlog, deleteBlog ,newGetApi , deletBlogByQueryNew }
 
 
 

@@ -14,12 +14,12 @@ router.get("/test-me", (req, res)=> { res.status(200).send("All Done")})
 router.post("/authors", authorController.authors)
 
 
-router.post("/blogs" , authentication, blogController.blogs)
+router.post("/blogs" , authentication , blogController.blogs)
 
 
 // router.get("/blogs", authentication , blogController.allBlogs)
  // // // Or Or Or
-router.get("/blogs", authentication,  blogController.newGetApi)
+router.get("/blogs", authentication ,  blogController.newGetApi)
 
 
 
@@ -31,7 +31,7 @@ router.delete("/blogs/:blogId", authentication , authorisation , blogController.
 
 // router.delete("/blogs" , authentication , blogController.deletBlogByQuery )
 // // // Or Or Or 
-router.delete("/blogs" ,authentication , blogController.deletBlogByQueryNew )
+router.delete("/blogs" , authentication , blogController.deletBlogByQueryNew )
 
 
 router.post("/login" , authorController.loginAuthor)
