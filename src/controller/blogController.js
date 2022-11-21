@@ -38,9 +38,9 @@ const blogs = async function (req, res) {
 
         // // If isPulished is true then do two thing -> attach current date to pulishedAt key and make true isPublished
 
-        if (isPublished) { req.body.publishedAt =  Date.now()}
-        if (isDeleted){ req.body.deletedAt =  Date.now()}
-    
+        if (isPublished) { req.body.publishedAt = Date.now() }
+        if (isDeleted) { req.body.deletedAt = Date.now() }
+
 
 
         // // // If everyThing is right then created blog with this data and send back into response. 
@@ -60,32 +60,36 @@ const blogs = async function (req, res) {
 
 
 
-const newGetApi = async function(req ,res ){
-    // const { authorId, category, tags, subcategory } = req.query
+const newGetApi = async function (req, res) {
+    try {
 
-    let query = req.query
+        // const { authorId, category, tags, subcategory } = req.query
 
-    // console.log(query)
+        let query = req.query
 
-    for(let key in query){
-        if(key!="category" && key!="subcategory" && key!="tags" && key!="title" && key!= "authorId") return res.status(400).send({status : false , message: "Key does't exist in DB , check key name please."})
+        // console.log(query)
+
+        for (let key in query) {
+            if (key != "category" && key != "subcategory" && key != "tags" && key != "title" && key != "authorId") return res.status(400).send({ status: false, message: "Key does't exist in DB , check key name please." })
+        }
+
+        // console.log(query)
+
+        // // Below line is best for using filter data by query params it is nice way to do same job then above function.
+        // // But time wise above Query is taking less time then this query. 
+
+        let findObj = { isDeleted: false, isPublished: true, ...query }
+
+        // console.log(findObj)
+
+        let data = await blogModel.find(findObj)
+
+        if (data.length <= 0) return res.status(404).send({ status: false, message: 'No Data Found with given key.' })
+
+        res.status(200).send({ status: true, AllDataAre: data.length, data: data })
+    } catch (err) {
+        res.status(500).send({ status: false, message: err.message })
     }
-    
-    // console.log(query)
-
-    // // Below line is best for using filter data by query params it is nice way to do same job then above function.
-    // // But time wise above Query is taking less time then this query. 
-
-    let findObj = {isDeleted:false , isPublished : true , ...query}
-
-    // console.log(findObj)
-    
-    let data = await blogModel.find(findObj)
-
-    if (data.length <= 0) return res.status(404).send({ status: false, message: 'No Data Found with given key.' })
-
-    res.status(200).send({ status: true , AllDataAre: data.length , data: data })
-
 }
 
 // // // // Till Day 1 ------
@@ -100,7 +104,7 @@ const updateBlog = async function (req, res) {
         let { title, body, category, isPublished, tags, subcategory } = updatedBody;
 
         if (Object.keys(updatedBody).length <= 0) return res.status(400).send({ status: false, message: "Data must be present" });
-        
+
         let blogId = req.params.blogId;
 
         // if (!mongoose.Types.ObjectId.isValid(blogId)) return res.status(400).send({ Status: false, msg: "Invalid Blog Id" })
@@ -171,40 +175,46 @@ const deleteBlog = async function (req, res) {
 
 
 
-const deletBlogByQueryNew = async function(req ,res){
-    let findObj = { isDeleted: false  , isPublished : false , ...req.query}
+const deletBlogByQueryNew = async function (req, res) {
 
-    let tokenAuthorId = req.tokenAuthorId
+    try {
 
-    let authorIdInQuery = req.query.authorId
-    if(authorIdInQuery){
+        let findObj = { isDeleted: false, isPublished: false, ...req.query }
 
-        if(tokenAuthorId != authorIdInQuery) return res.status(403).send({status : false , message : "You are not authorized to do that, token athorId is different from query authorId, Forbidden"})
+        let tokenAuthorId = req.tokenAuthorId
 
-        findObj.authorId = tokenAuthorId
-        if ( Object.keys(findObj).length <= 3) return res.status(400).send({ status: false, message: "Please give some data that you want to delete that is not deleted" })
+        let authorIdInQuery = req.query.authorId
+        if (authorIdInQuery) {
+
+            if (tokenAuthorId != authorIdInQuery) return res.status(403).send({ status: false, message: "You are not authorized to do that, token athorId is different from query authorId, Forbidden" })
+
+            findObj.authorId = tokenAuthorId
+            if (Object.keys(findObj).length <= 3) return res.status(400).send({ status: false, message: "Please give some data that you want to delete that is not deleted" })
 
 
-    }else{
+        } else {
 
-        findObj.authorId = tokenAuthorId
-        if ( Object.keys(findObj).length <= 3) return res.status(400).send({ status: false, message: "Please give some data that you want to delete that is not deleted" })
+            findObj.authorId = tokenAuthorId
+            if (Object.keys(findObj).length <= 3) return res.status(400).send({ status: false, message: "Please give some data that you want to delete that is not deleted" })
 
+        }
+
+        // console.log(findObj)
+
+
+
+        let data = await blogModel.updateMany(
+            findObj,
+            { $set: { isDeleted: true, deletedAt: Date.now() } }
+        )
+
+        if (data.matchedCount <= 0) return res.status(404).send({ status: false, message: "No Data Found" })
+
+        res.status(200).send({ status: true, message: `${data.matchedCount} is deleted` })
+
+    } catch (err) {
+        res.status(500).send({ status: false, message: err.message })
     }
-
-    // console.log(findObj)
-
-
-
-    let data = await blogModel.updateMany(
-        findObj,
-        { $set: { isDeleted: true, deletedAt: Date.now() } }
-    )
-
-    if (data.matchedCount <= 0) return res.status(404).send({ status: false, message: "No Data Found" })
-
-    res.status(200).send({ status: true, message: `${data.matchedCount} is deleted` })
-
 }
 
 
@@ -216,7 +226,7 @@ const deletBlogByQueryNew = async function(req ,res){
 
 
 
-module.exports = {  blogs,  updateBlog, deleteBlog ,newGetApi , deletBlogByQueryNew }
+module.exports = { blogs, updateBlog, deleteBlog, newGetApi, deletBlogByQueryNew }
 
 
 
@@ -240,7 +250,7 @@ module.exports = {  blogs,  updateBlog, deleteBlog ,newGetApi , deletBlogByQuery
 
 
 
-// // // Get get with query params 
+// // // Get get with query params
 // const allBlogs = async function (req, res) {
 
 //     try {
